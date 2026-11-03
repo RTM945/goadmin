@@ -3,6 +3,7 @@ package utils
 import (
 	"archive/zip"
 	"bytes"
+	crand "crypto/rand"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
@@ -19,34 +20,24 @@ import (
 	"strings"
 	textTmpl "text/template"
 	"time"
-
-	"github.com/NebulousLabs/fastrand"
+	"unicode"
 )
 
+// Uuid 生成 length 位的随机串（数字和大小写字母），用作会话 ID 等，所以用 crypto/rand（原来是 fastrand）。
 func Uuid(length int64) string {
-	ele := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "v", "k",
-		"l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "Driver", "E", "F", "G",
-		"H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"}
-	ele, _ = Random(ele)
-	uuid := ""
-	var i int64
-	for i = 0; i < length; i++ {
-		uuid += ele[fastrand.Intn(59)]
+	const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	out := make([]byte, length)
+	var one [1]byte
+	for i := range out {
+		for {
+			_, _ = crand.Read(one[:])
+			if int(one[0]) < 256-256%len(alphabet) { // 拒绝采样，避免取模偏差
+				out[i] = alphabet[int(one[0])%len(alphabet)]
+				break
+			}
+		}
 	}
-	return uuid
-}
-
-func Random(strings []string) ([]string, error) {
-	for i := len(strings) - 1; i > 0; i-- {
-		num := fastrand.Intn(i + 1)
-		strings[i], strings[num] = strings[num], strings[i]
-	}
-
-	str := make([]string, 0)
-	for i := 0; i < len(strings); i++ {
-		str = append(str, strings[i])
-	}
-	return str, nil
+	return string(out)
 }
 
 func CompressedContent(h *template.HTML) {
@@ -499,4 +490,23 @@ func UnzipDir(src, dest string) error {
 	}
 
 	return nil
+}
+
+// Title 把每个单词的首字母大写、其余小写，代替 cases.Title(language.Und).String（裁剪时去掉了 x/text）。
+func Title(s string) string {
+	out := []rune(s)
+	start := true
+	for i, r := range out {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '\'' {
+			if start {
+				out[i] = unicode.ToUpper(r)
+			} else {
+				out[i] = unicode.ToLower(r)
+			}
+			start = false
+		} else {
+			start = true
+		}
+	}
+	return string(out)
 }

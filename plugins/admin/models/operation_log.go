@@ -1,8 +1,8 @@
 package models
 
 import (
-	"github.com/GoAdminGroup/go-admin/modules/db"
-	"github.com/GoAdminGroup/go-admin/modules/db/dialect"
+	"goadmin/modules/db"
+	"goadmin/modules/db/dialect"
 )
 
 // OperationLogModel is operation log model structure.

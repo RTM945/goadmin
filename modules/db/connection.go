@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GoAdminGroup/go-admin/modules/config"
-	"github.com/GoAdminGroup/go-admin/modules/service"
+	"goadmin/modules/config"
+	"goadmin/modules/service"
 )
 
 const (
@@ -71,23 +71,13 @@ type Connection interface {
 	GetDB(key string) *sql.DB
 
 	GetConfig(name string) config.Database
-
-	CreateDB(name string, beans ...interface{}) error
 }
 
 // GetConnectionByDriver return the Connection by given driver name.
 func GetConnectionByDriver(driver string) Connection {
 	switch driver {
-	case "mysql":
-		return GetMysqlDB()
-	case "mssql":
-		return GetMssqlDB()
-	case "sqlite":
+	case "sqlite": // 裁剪后只留 SQLite（GM 后台自己的账号、菜单、权限、操作日志）
 		return GetSqliteDB()
-	case "postgresql":
-		return GetPostgresqlDB()
-	case "oceanbase":
-		return GetOceanBaseDB()
 	default:
 		panic("driver not found!")
 	}

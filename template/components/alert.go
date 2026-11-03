@@ -3,9 +3,9 @@ package components
 import (
 	"html/template"
 
-	"github.com/GoAdminGroup/go-admin/modules/errors"
-	"github.com/GoAdminGroup/go-admin/modules/language"
-	"github.com/GoAdminGroup/go-admin/template/types"
+	"goadmin/modules/errors"
+	"goadmin/modules/language"
+	"goadmin/template/types"
 )
 
 type AlertAttribute struct {

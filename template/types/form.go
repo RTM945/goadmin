@@ -11,18 +11,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoAdminGroup/go-admin/context"
-	"github.com/GoAdminGroup/go-admin/modules/config"
-	"github.com/GoAdminGroup/go-admin/modules/constant"
-	"github.com/GoAdminGroup/go-admin/modules/db"
-	"github.com/GoAdminGroup/go-admin/modules/errors"
-	"github.com/GoAdminGroup/go-admin/modules/file"
-	"github.com/GoAdminGroup/go-admin/modules/language"
-	"github.com/GoAdminGroup/go-admin/modules/logger"
-	"github.com/GoAdminGroup/go-admin/modules/utils"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/form"
-	form2 "github.com/GoAdminGroup/go-admin/template/types/form"
+	"goadmin/context"
+	"goadmin/modules/config"
+	"goadmin/modules/constant"
+	"goadmin/modules/db"
+	"goadmin/modules/errors"
+	"goadmin/modules/file"
+	"goadmin/modules/language"
+	"goadmin/modules/logger"
+	"goadmin/modules/utils"
+	"goadmin/plugins/admin/modules"
+	"goadmin/plugins/admin/modules/form"
+	form2 "goadmin/template/types/form"
 )
 
 type FieldOption struct {
@@ -1123,11 +1123,11 @@ func searchJS(ext template.JS, url string, handler Handler, delay ...int) (templ
 	    	}
 	  	}
 	}`), context.Node{
-			Path:     url,
-			Method:   "get",
-			Handlers: context.Handlers{handler.Wrap()},
-			Value:    map[string]interface{}{constant.ContextNodeNeedAuth: 1},
-		}
+		Path:     url,
+		Method:   "get",
+		Handlers: context.Handlers{handler.Wrap()},
+		Value:    map[string]interface{}{constant.ContextNodeNeedAuth: 1},
+	}
 }
 
 func chooseCustomJS(field string, js template.HTML) template.HTML {
@@ -1175,23 +1175,23 @@ func chooseAjax(field, chooseField, url string, handler Handler, js ...template.
 	}
 
 	return utils.ParseHTML("choose_ajax", tmpls["choose_ajax"], struct {
-			Field       template.JS
-			ChooseField template.JS
-			PassValue   template.JS
-			ActionJS    template.JS
-			Url         template.JS
-		}{
-			Url:         template.JS(url),
-			Field:       template.JS(field),
-			ChooseField: template.JS(chooseField),
-			PassValue:   passValue,
-			ActionJS:    template.JS(actionJS),
-		}), context.Node{
-			Path:     url,
-			Method:   "post",
-			Handlers: context.Handlers{handler.Wrap()},
-			Value:    map[string]interface{}{constant.ContextNodeNeedAuth: 1},
-		}
+		Field       template.JS
+		ChooseField template.JS
+		PassValue   template.JS
+		ActionJS    template.JS
+		Url         template.JS
+	}{
+		Url:         template.JS(url),
+		Field:       template.JS(field),
+		ChooseField: template.JS(chooseField),
+		PassValue:   passValue,
+		ActionJS:    template.JS(actionJS),
+	}), context.Node{
+		Path:     url,
+		Method:   "post",
+		Handlers: context.Handlers{handler.Wrap()},
+		Value:    map[string]interface{}{constant.ContextNodeNeedAuth: 1},
+	}
 }
 
 func chooseHideJS(field string, value []string, chooseFields ...string) template.HTML {

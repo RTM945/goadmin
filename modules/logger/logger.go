@@ -2,191 +2,33 @@
 // Use of this source code is governed by a Apache-2.0 style
 // license that can be found in the LICENSE file.
 
+// Package logger 原来是 zap + lumberjack，裁剪后改成标准库 log/slog：
+// 日志写到 slog.Default()，落点、格式、滚动都由宿主程序配。函数名保持原样，调用方不用改。
 package logger
 
 import (
+	stdctx "context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
-	"strconv"
 
-	"github.com/GoAdminGroup/go-admin/context"
-	"github.com/GoAdminGroup/go-admin/modules/trace"
-	"github.com/GoAdminGroup/go-admin/modules/utils"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"gopkg.in/natefinch/lumberjack.v2"
+	"goadmin/context"
+	"goadmin/modules/trace"
 )
 
-var (
-	defaultEncoderCfg = EncoderCfg{
-		TimeKey:       "ts",
-		LevelKey:      "level",
-		NameKey:       "logger",
-		CallerKey:     "caller",
-		MessageKey:    "msg",
-		StacktraceKey: "stacktrace",
-		Level:         "capitalColor",
-		Time:          "ISO8601",
-		Duration:      "seconds",
-		Caller:        "short",
-		Encoding:      "console",
-	}
-	defaultRotateCfg = RotateCfg{
-		MaxSize:    10,
-		MaxBackups: 5,
-		MaxAge:     30,
-		Compress:   false,
-	}
-
-	logger = &Logger{
-		rotate:  defaultRotateCfg,
-		encoder: defaultEncoderCfg,
-		Level:   zapcore.InfoLevel,
-	}
-
-	infoLevelEnabler = zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl == zapcore.InfoLevel
-	})
-
-	errorLevelEnabler = zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl >= zapcore.ErrorLevel
-	})
-
-	accessLevelEnabler = zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-		return lvl == zapcore.WarnLevel
-	})
-)
-
-func init() {
-	logger.Init()
-}
+var logger = &Logger{Level: slog.LevelInfo}
 
 type Logger struct {
-	logger        *zap.Logger
-	sugaredLogger *zap.SugaredLogger
-
 	infoLogOff   bool
 	errorLogOff  bool
 	accessLogOff bool
 
 	accessAssetsLogOff bool
 
-	debug bool
-
 	sqlLogOpen bool
 
-	infoLogPath   string
-	errorLogPath  string
-	accessLogPath string
-
-	rotate  RotateCfg
-	encoder EncoderCfg
-
-	Level zapcore.Level
-}
-
-type EncoderCfg struct {
-	TimeKey       string
-	LevelKey      string
-	NameKey       string
-	CallerKey     string
-	MessageKey    string
-	StacktraceKey string
-	Level         string
-	Time          string
-	Duration      string
-	Caller        string
-	Encoding      string
-}
-
-type RotateCfg struct {
-	MaxSize    int
-	MaxBackups int
-	MaxAge     int
-	Compress   bool
-}
-
-func (l *Logger) Init() {
-	zapLogger := zap.New(zapcore.NewTee(
-		zapcore.NewCore(l.getEncoder(l.encoder.LevelKey), l.getLogWriter(l.infoLogPath), infoLevelEnabler),
-		zapcore.NewCore(l.getEncoder(l.encoder.LevelKey), l.getLogWriter(l.errorLogPath), errorLevelEnabler),
-		zapcore.NewCore(l.getEncoder(""), l.getLogWriter(l.accessLogPath), accessLevelEnabler),
-	), zap.AddCaller(), zap.AddCallerSkip(1), zap.AddStacktrace(errorLevelEnabler))
-	l.sugaredLogger = zapLogger.Sugar()
-	l.logger = zapLogger
-}
-
-func (l *Logger) getEncoder(levelKey string) zapcore.Encoder {
-
-	var (
-		timeEncoder     = new(zapcore.TimeEncoder)
-		durationEncoder = new(zapcore.DurationEncoder)
-		callerEncoder   = new(zapcore.CallerEncoder)
-		nameEncoder     = new(zapcore.NameEncoder)
-		levelEncoder    = new(zapcore.LevelEncoder)
-	)
-
-	_ = timeEncoder.UnmarshalText([]byte(l.encoder.Time))
-	_ = durationEncoder.UnmarshalText([]byte(l.encoder.Duration))
-	_ = callerEncoder.UnmarshalText([]byte(l.encoder.Caller))
-	_ = nameEncoder.UnmarshalText([]byte("full"))
-	_ = levelEncoder.UnmarshalText([]byte(l.encoder.Level))
-
-	encoderConfig := zapcore.EncoderConfig{
-		TimeKey:        l.encoder.TimeKey,
-		LevelKey:       levelKey,
-		NameKey:        l.encoder.NameKey,
-		CallerKey:      l.encoder.CallerKey,
-		MessageKey:     l.encoder.MessageKey,
-		StacktraceKey:  l.encoder.StacktraceKey,
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    *levelEncoder,
-		EncodeTime:     *timeEncoder,
-		EncodeDuration: *durationEncoder,
-		EncodeCaller:   *callerEncoder,
-		EncodeName:     *nameEncoder,
-	}
-
-	return filterZapEncoder(l.encoder.Encoding, encoderConfig)
-}
-
-func (l *Logger) getLogWriter(path string) zapcore.WriteSyncer {
-	if path != "" {
-		lumberJackLogger := &lumberjack.Logger{
-			Filename:   path,
-			MaxSize:    l.rotate.MaxSize,
-			MaxBackups: l.rotate.MaxBackups,
-			MaxAge:     l.rotate.MaxAge,
-			Compress:   l.rotate.Compress,
-		}
-		if l.debug {
-			return zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(lumberJackLogger))
-		}
-		return zapcore.AddSync(lumberJackLogger)
-	}
-	return zapcore.AddSync(os.Stdout)
-}
-
-func (l *Logger) SetRotate(cfg RotateCfg) {
-	if cfg.MaxSize != 0 && cfg.MaxAge != 0 && cfg.MaxBackups != 0 {
-		l.rotate = cfg
-	}
-}
-
-func (l *Logger) SetEncoder(cfg EncoderCfg) {
-	cfg.TimeKey = utils.SetDefault(cfg.TimeKey, "", defaultEncoderCfg.TimeKey)
-	cfg.LevelKey = utils.SetDefault(cfg.LevelKey, "", defaultEncoderCfg.LevelKey)
-	cfg.NameKey = utils.SetDefault(cfg.NameKey, "", defaultEncoderCfg.NameKey)
-	cfg.CallerKey = utils.SetDefault(cfg.CallerKey, "", defaultEncoderCfg.CallerKey)
-	cfg.MessageKey = utils.SetDefault(cfg.MessageKey, "", defaultEncoderCfg.MessageKey)
-	cfg.StacktraceKey = utils.SetDefault(cfg.StacktraceKey, "", defaultEncoderCfg.StacktraceKey)
-	cfg.Level = utils.SetDefault(cfg.Level, "", defaultEncoderCfg.Level)
-	cfg.Time = utils.SetDefault(cfg.Time, "", defaultEncoderCfg.Time)
-	cfg.Duration = utils.SetDefault(cfg.Duration, "", defaultEncoderCfg.Duration)
-	cfg.Caller = utils.SetDefault(cfg.Caller, "", defaultEncoderCfg.Caller)
-	cfg.Encoding = utils.SetDefault(cfg.Encoding, "", defaultEncoderCfg.Encoding)
-	l.encoder = cfg
+	Level slog.Level
 }
 
 type Config struct {
@@ -196,39 +38,32 @@ type Config struct {
 
 	SqlLogOpen bool
 
-	InfoLogPath   string
-	ErrorLogPath  string
-	AccessLogPath string
-
 	AccessAssetsLogOff bool
 
-	Rotate RotateCfg
-	Encode EncoderCfg
-
+	// Level -1 debug、0 info、1 warn、2 error（和原来的配置一样）
 	Level int8
-
-	Debug bool
 }
 
 func InitWithConfig(cfg Config) {
-	logger.infoLogPath = cfg.InfoLogPath
 	logger.infoLogOff = cfg.InfoLogOff
-	logger.errorLogPath = cfg.ErrorLogPath
 	logger.errorLogOff = cfg.ErrorLogOff
-	logger.accessLogPath = cfg.AccessLogPath
 	logger.accessLogOff = cfg.AccessLogOff
 	logger.sqlLogOpen = cfg.SqlLogOpen
 	logger.accessAssetsLogOff = cfg.AccessAssetsLogOff
-	logger.debug = cfg.Debug
-	logger.SetRotate(cfg.Rotate)
-	logger.SetEncoder(cfg.Encode)
-	logger.Level = filterZapAtomicLevelByViper(cfg.Level)
-	logger.Init()
+	logger.Level = levelOf(cfg.Level)
 }
 
-func SetRotate(cfg RotateCfg) {
-	logger.rotate = cfg
-	logger.Init()
+func levelOf(level int8) slog.Level {
+	switch level {
+	case -1:
+		return slog.LevelDebug
+	case 1:
+		return slog.LevelWarn
+	case 2:
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }
 
 // OpenSQLLog set the sqlLogOpen true.
@@ -236,183 +71,105 @@ func OpenSQLLog() {
 	logger.sqlLogOpen = true
 }
 
-// Debug print the debug message.
-func Debug(info ...interface{}) {
-	if !logger.infoLogOff {
-		if logger.Level <= zapcore.DebugLevel {
-			logger.sugaredLogger.Info(info...)
-		}
+func log(level slog.Level, msg string, args ...any) {
+	if level < logger.Level {
+		return
 	}
+	if level >= slog.LevelError && logger.errorLogOff || level < slog.LevelError && logger.infoLogOff {
+		return
+	}
+	slog.Default().Log(stdctx.Background(), level, msg, append([]any{"logger", "goadmin"}, args...)...)
 }
+
+func logCtx(ctx *context.Context, level slog.Level, format string, args ...interface{}) {
+	log(level, fmt.Sprintf(format, args...), "traceID", trace.GetTraceID(ctx))
+}
+
+// Debug print the debug message.
+func Debug(info ...interface{}) { log(slog.LevelDebug, fmt.Sprint(info...)) }
 
 // Debugf print the debug message.
 func Debugf(template string, args ...interface{}) {
-	if !logger.infoLogOff && logger.Level <= zapcore.DebugLevel {
-		logger.sugaredLogger.Infof(template, args...)
-	}
+	log(slog.LevelDebug, fmt.Sprintf(template, args...))
 }
 
 // Info print the info message.
-func Info(info ...interface{}) {
-	if !logger.infoLogOff && logger.Level <= zapcore.InfoLevel {
-		logger.sugaredLogger.Info(info...)
-	}
-}
+func Info(info ...interface{}) { log(slog.LevelInfo, fmt.Sprint(info...)) }
 
 // InfoCtx print the info message with ctx.
 func InfoCtx(ctx *context.Context, format string, args ...interface{}) {
-	if !logger.infoLogOff && logger.Level <= zapcore.InfoLevel {
-		logCtx(ctx, logger.logger.Info, format, args...)
-	}
+	logCtx(ctx, slog.LevelInfo, format, args...)
 }
 
-type logFunc func(msg string, fields ...zapcore.Field)
-
-func logCtx(ctx *context.Context, logFunc logFunc, format string, args ...interface{}) {
-	logFunc(fmt.Sprintf(format, args...), zap.String("traceID", trace.GetTraceID(ctx)))
-}
-
-// Info print the info message.
+// Infof print the info message.
 func Infof(template string, args ...interface{}) {
-	if !logger.infoLogOff && logger.Level <= zapcore.InfoLevel {
-		logger.sugaredLogger.Infof(template, args...)
-	}
+	log(slog.LevelInfo, fmt.Sprintf(template, args...))
 }
 
 // Warn print the warning message.
-func Warn(info ...interface{}) {
-	if !logger.infoLogOff && logger.Level <= zapcore.WarnLevel {
-		logger.sugaredLogger.Warn(info...)
-	}
-}
+func Warn(info ...interface{}) { log(slog.LevelWarn, fmt.Sprint(info...)) }
 
 // WarnCtx print the warning message with ctx.
 func WarnCtx(ctx *context.Context, format string, args ...interface{}) {
-	if !logger.infoLogOff && logger.Level <= zapcore.WarnLevel {
-		logCtx(ctx, logger.logger.Warn, format, args...)
-	}
+	logCtx(ctx, slog.LevelWarn, format, args...)
 }
 
 // Warnf print the warning message.
 func Warnf(template string, args ...interface{}) {
-	if !logger.infoLogOff && logger.Level <= zapcore.WarnLevel {
-		logger.sugaredLogger.Warnf(template, args...)
-	}
+	log(slog.LevelWarn, fmt.Sprintf(template, args...))
 }
 
 // Error print the error message.
-func Error(err ...interface{}) {
-	if !logger.errorLogOff && logger.Level <= zapcore.ErrorLevel {
-		logger.sugaredLogger.Error(err...)
-	}
-}
+func Error(err ...interface{}) { log(slog.LevelError, fmt.Sprint(err...)) }
 
 // ErrorCtx print the error message with ctx.
 func ErrorCtx(ctx *context.Context, format string, args ...interface{}) {
-	if !logger.errorLogOff && logger.Level <= zapcore.ErrorLevel {
-		logCtx(ctx, logger.logger.Error, format, args...)
-	}
+	logCtx(ctx, slog.LevelError, format, args...)
 }
 
 // Errorf print the error message.
 func Errorf(template string, args ...interface{}) {
-	if !logger.errorLogOff && logger.Level <= zapcore.ErrorLevel {
-		logger.sugaredLogger.Errorf(template, args...)
-	}
+	log(slog.LevelError, fmt.Sprintf(template, args...))
 }
 
-// Fatal print the fatal message.
+// Fatal print the fatal message and exit.
 func Fatal(info ...interface{}) {
-	if !logger.errorLogOff && logger.Level <= zapcore.ErrorLevel {
-		logger.sugaredLogger.Fatal(info...)
-	}
+	log(slog.LevelError, fmt.Sprint(info...))
+	os.Exit(1)
 }
 
-// FatalCtx print the fatal message with ctx.
-func FatalCtx(ctx *context.Context, format string, args ...interface{}) {
-	if !logger.errorLogOff && logger.Level <= zapcore.FatalLevel {
-		logCtx(ctx, logger.logger.Fatal, format, args...)
-	}
-}
-
-// Fatalf print the fatal message.
+// Fatalf print the fatal message and exit.
 func Fatalf(template string, args ...interface{}) {
-	if !logger.errorLogOff && logger.Level <= zapcore.ErrorLevel {
-		logger.sugaredLogger.Fatalf(template, args...)
-	}
+	log(slog.LevelError, fmt.Sprintf(template, args...))
+	os.Exit(1)
 }
 
-// Fatal print the panic message.
+// Panic print the panic message and panic.
 func Panic(info ...interface{}) {
-	logger.sugaredLogger.Panic(info...)
+	msg := fmt.Sprint(info...)
+	log(slog.LevelError, msg)
+	panic(msg)
 }
 
-// PanicCtx print the panic message with ctx.
-func PanicCtx(ctx *context.Context, format string, args ...interface{}) {
-	logCtx(ctx, logger.logger.Panic, format, args...)
-}
-
-// Panicf print the panic message.
+// Panicf print the panic message and panic.
 func Panicf(template string, args ...interface{}) {
-	logger.sugaredLogger.Panicf(template, args...)
+	msg := fmt.Sprintf(template, args...)
+	log(slog.LevelError, msg)
+	panic(msg)
 }
 
 // Access print the access message.
 func Access(ctx *context.Context) {
-	if !logger.accessLogOff && logger.Level <= zapcore.InfoLevel {
-		if logger.accessAssetsLogOff {
-			if filepath.Ext(ctx.Path()) == "" {
-				logger.logger.Info("[GoAdmin] access log",
-					zap.String("traceID", trace.GetTraceID(ctx)),
-					zap.String("statuscode", strconv.Itoa(ctx.Response.StatusCode)),
-					zap.String("method", string(ctx.Method())),
-					zap.String("path", ctx.Path()))
-			}
-		} else {
-			logger.logger.Info("[GoAdmin] access log",
-				zap.String("traceID", trace.GetTraceID(ctx)),
-				zap.String("statuscode", strconv.Itoa(ctx.Response.StatusCode)),
-				zap.String("method", string(ctx.Method())),
-				zap.String("path", ctx.Path()))
-		}
+	if logger.accessLogOff || logger.accessAssetsLogOff && filepath.Ext(ctx.Path()) != "" {
+		return
 	}
+	log(slog.LevelInfo, "access", "traceID", trace.GetTraceID(ctx), "status", ctx.Response.StatusCode,
+		"method", ctx.Method(), "path", ctx.Path())
 }
 
 // LogSQL print the sql info message.
 func LogSQL(statement string, args []interface{}) {
-	if !logger.infoLogOff && logger.sqlLogOpen && statement != "" {
-		if logger.Level <= zapcore.InfoLevel {
-			logger.sugaredLogger.With("statement", statement, "args", args).Info("[GoAdmin]")
-		}
+	if logger.sqlLogOpen && statement != "" {
+		log(slog.LevelInfo, "sql", "statement", statement, "args", args)
 	}
-}
-
-func filterZapEncoder(encoding string, encoderConfig zapcore.EncoderConfig) zapcore.Encoder {
-	var encoder zapcore.Encoder
-	switch encoding {
-	default:
-		encoder = zapcore.NewConsoleEncoder(encoderConfig)
-	case "json":
-		encoder = zapcore.NewJSONEncoder(encoderConfig)
-	case "console":
-		encoder = zapcore.NewConsoleEncoder(encoderConfig)
-	}
-	return encoder
-}
-
-func filterZapAtomicLevelByViper(level int8) zapcore.Level {
-	var atomViper zapcore.Level
-	switch level {
-	default:
-		atomViper = zap.InfoLevel
-	case -1:
-		atomViper = zap.DebugLevel
-	case 0:
-		atomViper = zap.InfoLevel
-	case 1:
-		atomViper = zap.WarnLevel
-	case 2:
-		atomViper = zap.ErrorLevel
-	}
-	return atomViper
 }

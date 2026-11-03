@@ -1,18 +1,18 @@
 package admin
 
 import (
-	"github.com/GoAdminGroup/go-admin/context"
-	"github.com/GoAdminGroup/go-admin/modules/config"
-	"github.com/GoAdminGroup/go-admin/modules/service"
-	"github.com/GoAdminGroup/go-admin/modules/system"
-	"github.com/GoAdminGroup/go-admin/modules/utils"
-	"github.com/GoAdminGroup/go-admin/plugins"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/controller"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/guard"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/table"
-	"github.com/GoAdminGroup/go-admin/template/types"
-	"github.com/GoAdminGroup/go-admin/template/types/action"
-	_ "github.com/GoAdminGroup/go-admin/template/types/display"
+	"goadmin/context"
+	"goadmin/modules/config"
+	"goadmin/modules/service"
+	"goadmin/modules/system"
+	"goadmin/modules/utils"
+	"goadmin/plugins"
+	"goadmin/plugins/admin/controller"
+	"goadmin/plugins/admin/modules/guard"
+	"goadmin/plugins/admin/modules/table"
+	"goadmin/template/types"
+	"goadmin/template/types/action"
+	_ "goadmin/template/types/display"
 )
 
 // Admin is a GoAdmin plugin.
@@ -43,9 +43,6 @@ func (admin *Admin) InitPlugin(services service.List) {
 	}
 	if c.IsAllowConfigModification() {
 		genList.Add("site", st.GetSiteTable)
-	}
-	if c.IsNotProductionEnvironment() {
-		genList.Add("generate", st.GetGenerateForm)
 	}
 	admin.tableList.Combine(genList)
 	admin.guardian = guard.New(admin.Services, admin.Conn, admin.tableList, admin.UI.NavButtons)

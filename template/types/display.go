@@ -2,15 +2,14 @@ package types
 
 import (
 	"fmt"
+	"goadmin/modules/utils"
 	"html"
 	"html/template"
 	"strings"
 
-	"github.com/GoAdminGroup/go-admin/context"
-	"github.com/GoAdminGroup/go-admin/modules/config"
-	"github.com/GoAdminGroup/go-admin/template/types/form"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	"goadmin/context"
+	"goadmin/modules/config"
+	"goadmin/template/types/form"
 )
 
 type DisplayFnGenerator interface {
@@ -182,7 +181,7 @@ func (f FieldDisplay) AddSubstr(start int, end int) DisplayProcessFnChains {
 
 func (f FieldDisplay) AddToTitle() DisplayProcessFnChains {
 	return f.DisplayProcessChains.Add(func(value FieldModel) interface{} {
-		return cases.Title(language.Und).String(value.Value)
+		return utils.Title(value.Value)
 	})
 }
 
@@ -305,7 +304,7 @@ func addSubstr(start int, end int, chains DisplayProcessFnChains) DisplayProcess
 
 func addToTitle(chains DisplayProcessFnChains) DisplayProcessFnChains {
 	chains = chains.Add(func(value FieldModel) interface{} {
-		return cases.Title(language.Und).String(value.Value)
+		return utils.Title(value.Value)
 	})
 	return chains
 }

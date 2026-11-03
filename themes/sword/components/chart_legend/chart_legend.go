@@ -3,7 +3,7 @@ package chart_legend
 import (
 	"html/template"
 
-	adminTemplate "github.com/GoAdminGroup/go-admin/template"
+	adminTemplate "goadmin/template"
 )
 
 type ChartLegend struct {

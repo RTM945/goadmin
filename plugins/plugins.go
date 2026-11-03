@@ -6,31 +6,28 @@ package plugins
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	template2 "html/template"
 	"net/http"
 	"plugin"
 	"time"
 
-	"github.com/GoAdminGroup/go-admin/template/icon"
-	"github.com/GoAdminGroup/go-admin/template/types/action"
+	"goadmin/template/icon"
+	"goadmin/template/types/action"
 
-	"github.com/GoAdminGroup/go-admin/context"
-	"github.com/GoAdminGroup/go-admin/modules/auth"
-	"github.com/GoAdminGroup/go-admin/modules/config"
-	"github.com/GoAdminGroup/go-admin/modules/db"
-	"github.com/GoAdminGroup/go-admin/modules/language"
-	"github.com/GoAdminGroup/go-admin/modules/logger"
-	"github.com/GoAdminGroup/go-admin/modules/menu"
-	"github.com/GoAdminGroup/go-admin/modules/remote_server"
-	"github.com/GoAdminGroup/go-admin/modules/service"
-	"github.com/GoAdminGroup/go-admin/modules/ui"
-	"github.com/GoAdminGroup/go-admin/modules/utils"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/models"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/table"
-	"github.com/GoAdminGroup/go-admin/template"
-	"github.com/GoAdminGroup/go-admin/template/types"
+	"goadmin/context"
+	"goadmin/modules/auth"
+	"goadmin/modules/config"
+	"goadmin/modules/db"
+	"goadmin/modules/language"
+	"goadmin/modules/logger"
+	"goadmin/modules/menu"
+	"goadmin/modules/service"
+	"goadmin/modules/ui"
+	"goadmin/plugins/admin/models"
+	"goadmin/plugins/admin/modules/table"
+	"goadmin/template"
+	"goadmin/template/types"
 )
 
 // Plugin as one of the key components of goAdmin has three
@@ -410,62 +407,6 @@ func Exist(p Plugin) bool {
 func Add(p Plugin) {
 	// TODO: 验证插件合法性
 	pluginList = pluginList.Add(p)
-}
-
-func GetAll(req remote_server.GetOnlineReq, token string) (Plugins, Page) {
-
-	plugs := make(Plugins, 0)
-	page := Page{}
-
-	res, err := remote_server.GetOnline(req, token)
-
-	if err != nil {
-		return plugs, page
-	}
-
-	var data GetOnlineRes
-	err = json.Unmarshal(res, &data)
-	if err != nil {
-		return plugs, page
-	}
-
-	if data.Code != 0 {
-		return plugs, page
-	}
-
-	plugs = GetPluginsWithInfos(data.Data.List)
-	page = data.Data.Page
-
-	for index, p := range plugs {
-		for key, value := range pluginList {
-			if value.Name() == p.Name() {
-				info := pluginList[key].GetInfo()
-				info.CanUpdate = utils.CompareVersion(info.Version, plugs[index].GetInfo().Version)
-				info.OldVersion = info.Version
-				info.Downloaded = true
-				info.Description = language.GetWithScope(info.Description, info.Name)
-				info.Title = language.GetWithScope(info.Title, info.Name)
-				info.Version = plugs[index].GetInfo().Version
-				plugs[index] = NewBasePluginWithInfoAndIndexURL(info, value.GetIndexURL(), value.IsInstalled())
-				break
-			}
-		}
-	}
-
-	for _, p := range plugs {
-		exist := false
-		for _, pp := range allPluginList {
-			if pp.Name() == p.Name() {
-				exist = true
-				break
-			}
-		}
-		if !exist {
-			allPluginList = append(allPluginList, p)
-		}
-	}
-
-	return plugs, page
 }
 
 func Get() Plugins {

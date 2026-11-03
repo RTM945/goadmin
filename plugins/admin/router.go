@@ -3,13 +3,13 @@ package admin
 import (
 	"net/http"
 
-	"github.com/GoAdminGroup/go-admin/context"
-	"github.com/GoAdminGroup/go-admin/modules/auth"
-	"github.com/GoAdminGroup/go-admin/modules/config"
-	"github.com/GoAdminGroup/go-admin/modules/trace"
-	"github.com/GoAdminGroup/go-admin/modules/utils"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/response"
-	"github.com/GoAdminGroup/go-admin/template"
+	"goadmin/context"
+	"goadmin/modules/auth"
+	"goadmin/modules/config"
+	"goadmin/modules/trace"
+	"goadmin/modules/utils"
+	"goadmin/plugins/admin/modules/response"
+	"goadmin/template"
 )
 
 // initRouter initialize the router and return the context.
@@ -21,10 +21,6 @@ func (admin *Admin) initRouter() *Admin {
 	// auth
 	route.GET(config.GetLoginUrl(), admin.handler.ShowLogin)
 	route.POST("/signin", admin.handler.Auth)
-
-	// auto install
-	route.GET("/install", admin.handler.ShowInstall)
-	route.POST("/install/database/check", admin.handler.CheckDatabase)
 
 	checkRepeatedPath := make([]string, 0)
 	for _, themeName := range template.Themes() {
@@ -57,16 +53,6 @@ func (admin *Admin) initRouter() *Admin {
 	authRoute.GET("/menu", admin.handler.ShowMenu).Name("menu")
 	authRoute.GET("/menu/edit/show", admin.handler.ShowEditMenu).Name("menu_edit_show")
 	authRoute.GET("/menu/new", admin.handler.ShowNewMenu).Name("menu_new_show")
-
-	authRoute.GET("/plugins", admin.handler.Plugins).Name("plugins")
-
-	if config.IsNotProductionEnvironment() {
-		authRoute.GET("/plugins/store", admin.handler.PluginStore).Name("plugins_store")
-		authRoute.POST("/plugin/download", admin.handler.PluginDownload).Name("plugin_download")
-		authRoute.POST("/plugin/detail", admin.handler.PluginDetail).Name("plugin_detail")
-	}
-
-	authRoute.POST("/server/login", admin.guardian.ServerLogin, admin.handler.ServerLogin).Name("server_login")
 
 	formats := config.GetURLFormats()
 

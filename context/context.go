@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoAdminGroup/go-admin/modules/constant"
+	"goadmin/modules/constant"
 )
 
 const abortIndex int8 = math.MaxInt8 / 2

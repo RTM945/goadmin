@@ -1,9 +1,9 @@
 package display
 
 import (
-	"github.com/GoAdminGroup/go-admin/context"
-	"github.com/GoAdminGroup/go-admin/template"
-	"github.com/GoAdminGroup/go-admin/template/types"
+	"goadmin/context"
+	"goadmin/template"
+	"goadmin/template/types"
 )
 
 type Link struct {

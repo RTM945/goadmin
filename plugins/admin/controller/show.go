@@ -3,34 +3,35 @@ package controller
 import (
 	"bytes"
 	"crypto/md5"
+	"encoding/csv"
 	"fmt"
 	template2 "html/template"
 	"mime"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/360EntSecGroup-Skylar/excelize"
-	"github.com/GoAdminGroup/go-admin/context"
-	"github.com/GoAdminGroup/go-admin/modules/auth"
-	"github.com/GoAdminGroup/go-admin/modules/errors"
-	"github.com/GoAdminGroup/go-admin/modules/language"
-	"github.com/GoAdminGroup/go-admin/modules/logger"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/constant"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/form"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/guard"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/parameter"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/response"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/table"
-	"github.com/GoAdminGroup/go-admin/template"
-	"github.com/GoAdminGroup/go-admin/template/icon"
-	"github.com/GoAdminGroup/go-admin/template/types"
-	"github.com/GoAdminGroup/go-admin/template/types/action"
-	form2 "github.com/GoAdminGroup/go-admin/template/types/form"
-	"github.com/GoAdminGroup/html"
+	"goadmin/context"
+	"goadmin/modules/auth"
+	"goadmin/modules/errors"
+	"goadmin/modules/html"
+	"goadmin/modules/language"
+	"goadmin/modules/logger"
+	"goadmin/plugins/admin/modules"
+	"goadmin/plugins/admin/modules/constant"
+	"goadmin/plugins/admin/modules/form"
+	"goadmin/plugins/admin/modules/guard"
+	"goadmin/plugins/admin/modules/parameter"
+	"goadmin/plugins/admin/modules/response"
+	"goadmin/plugins/admin/modules/table"
+	"goadmin/template"
+	"goadmin/template/icon"
+	"goadmin/template/types"
+	"goadmin/template/types/action"
+	form2 "goadmin/template/types/form"
 )
 
 // ShowInfo show info page.
@@ -395,23 +396,20 @@ func (h *Handler) Assets(ctx *context.Context) {
 }
 
 // Export export table rows as excel object.
+// Export 导出成 CSV（原来是 excelize 写 xlsx，裁剪时换成标准库 encoding/csv）。
+// 开头写 UTF-8 BOM，Excel 双击打开中文不乱码。
 func (h *Handler) Export(ctx *context.Context) {
 	param := guard.GetExportParam(ctx)
 
-	tableName := "Sheet1"
 	prefix := ctx.Query(constant.PrefixKey)
 	panel := h.table(prefix, ctx)
 
-	f := excelize.NewFile()
-	index := f.NewSheet(tableName)
-	f.SetActiveSheet(index)
-
 	var (
 		infoData  table.PanelInfo
-		fileName  string
 		err       error
 		tableInfo = panel.GetInfo()
 		params    parameter.Parameters
+		fileName  = fmt.Sprintf("%s-%d.csv", tableInfo.Title, time.Now().Unix())
 	)
 
 	if fn := panel.GetInfo().ExportProcessFn; fn != nil {
@@ -429,12 +427,12 @@ func (h *Handler) Export(ctx *context.Context) {
 			params = parameter.GetParam(ctx.Request.URL, tableInfo.DefaultPageSize, tableInfo.SortField,
 				tableInfo.GetSort())
 			infoData, err = panel.GetData(ctx, params.WithIsAll(param.IsAll))
-			fileName = fmt.Sprintf("%s-%d-page-%s-pageSize-%s.xlsx", tableInfo.Title, time.Now().Unix(),
+			fileName = fmt.Sprintf("%s-%d-page-%s-pageSize-%s.csv", tableInfo.Title, time.Now().Unix(),
 				params.Page, params.PageSize)
 		} else {
 			infoData, err = panel.GetDataWithIds(ctx, parameter.GetParam(ctx.Request.URL,
 				tableInfo.DefaultPageSize, tableInfo.SortField, tableInfo.GetSort()).WithPKs(param.Id...))
-			fileName = fmt.Sprintf("%s-%d-id-%s.xlsx", tableInfo.Title, time.Now().Unix(), strings.Join(param.Id, "_"))
+			fileName = fmt.Sprintf("%s-%d-id-%s.csv", tableInfo.Title, time.Now().Unix(), strings.Join(param.Id, "_"))
 		}
 		if err != nil {
 			response.Error(ctx, "export error")
@@ -442,52 +440,35 @@ func (h *Handler) Export(ctx *context.Context) {
 		}
 	}
 
-	// TODO: support any numbers of fields.
-	orders := []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
-		"L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"}
-
-	if len(infoData.Thead) > 26 {
-		j := -1
-		for i := 0; i < len(infoData.Thead)-26; i++ {
-			if i%26 == 0 {
-				j++
-			}
-			letter := orders[j] + orders[i%26]
-			orders = append(orders, letter)
-		}
-	}
-
-	columnIndex := 0
+	var buf bytes.Buffer
+	buf.Write([]byte{0xEF, 0xBB, 0xBF}) // UTF-8 BOM
+	w := csv.NewWriter(&buf)
+	row := make([]string, 0, len(infoData.Thead))
 	for _, head := range infoData.Thead {
 		if !head.Hide {
-			f.SetCellValue(tableName, orders[columnIndex]+"1", head.Head)
-			columnIndex++
+			row = append(row, head.Head)
 		}
 	}
-
-	count := 2
+	_ = w.Write(row)
 	for _, info := range infoData.InfoList {
-		columnIndex = 0
+		row = row[:0]
 		for _, head := range infoData.Thead {
 			if !head.Hide {
 				if tableInfo.IsExportValue() {
-					f.SetCellValue(tableName, orders[columnIndex]+strconv.Itoa(count), info[head.Field].Value)
+					row = append(row, info[head.Field].Value)
 				} else {
-					f.SetCellValue(tableName, orders[columnIndex]+strconv.Itoa(count), info[head.Field].Content)
+					row = append(row, string(info[head.Field].Content))
 				}
-				columnIndex++
 			}
 		}
-		count++
+		_ = w.Write(row)
 	}
-
-	buf, err := f.WriteToBuffer()
-
-	if err != nil || buf == nil {
+	w.Flush()
+	if err := w.Error(); err != nil {
 		response.Error(ctx, "export error")
 		return
 	}
 
-	ctx.AddHeader("content-disposition", `attachment; filename=`+fileName)
-	ctx.Data(200, "application/vnd.ms-excel", buf.Bytes())
+	ctx.AddHeader("content-disposition", `attachment; filename*=UTF-8''`+url.PathEscape(fileName))
+	ctx.Data(200, "text/csv; charset=utf-8", buf.Bytes())
 }

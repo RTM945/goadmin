@@ -3,9 +3,9 @@ package form
 import (
 	"html/template"
 
-	"github.com/GoAdminGroup/go-admin/modules/config"
-	"github.com/GoAdminGroup/go-admin/modules/db"
-	"github.com/GoAdminGroup/go-admin/modules/language"
+	"goadmin/modules/config"
+	"goadmin/modules/db"
+	"goadmin/modules/language"
 )
 
 type Type uint8

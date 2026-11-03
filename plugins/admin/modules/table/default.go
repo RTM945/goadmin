@@ -11,20 +11,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoAdminGroup/go-admin/context"
-	"github.com/GoAdminGroup/go-admin/modules/config"
+	"goadmin/context"
+	"goadmin/modules/config"
 
-	"github.com/GoAdminGroup/go-admin/modules/db"
-	"github.com/GoAdminGroup/go-admin/modules/db/dialect"
-	errs "github.com/GoAdminGroup/go-admin/modules/errors"
-	"github.com/GoAdminGroup/go-admin/modules/language"
-	"github.com/GoAdminGroup/go-admin/modules/logger"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/constant"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/form"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/paginator"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/parameter"
-	"github.com/GoAdminGroup/go-admin/template/types"
+	"goadmin/modules/db"
+	"goadmin/modules/db/dialect"
+	errs "goadmin/modules/errors"
+	"goadmin/modules/language"
+	"goadmin/modules/logger"
+	"goadmin/plugins/admin/modules"
+	"goadmin/plugins/admin/modules/constant"
+	"goadmin/plugins/admin/modules/form"
+	"goadmin/plugins/admin/modules/paginator"
+	"goadmin/plugins/admin/modules/parameter"
+	"goadmin/template/types"
 )
 
 // DefaultTable is an implementation of table.Table
@@ -162,8 +162,7 @@ func (tb *DefaultTable) GetData(ctx *context.Context, params parameter.Parameter
 	extraInfo := ""
 
 	if !tb.Info.IsHideQueryInfo {
-		extraInfo = fmt.Sprintf("<b>" + language.Get("query time") + ": </b>" +
-			fmt.Sprintf("%.3fms", endTime.Sub(beginTime).Seconds()*1000))
+		extraInfo = fmt.Sprintf("<b>%s: </b>%.3fms", language.Get("query time"), endTime.Sub(beginTime).Seconds()*1000)
 	}
 
 	return PanelInfo{
@@ -257,8 +256,7 @@ func (tb *DefaultTable) GetDataWithIds(ctx *context.Context, params parameter.Pa
 			Param:        params,
 			PageSizeList: tb.Info.GetPageSizeList(),
 		}).
-			SetExtraInfo(template.HTML(fmt.Sprintf("<b>" + language.Get("query time") + ": </b>" +
-				fmt.Sprintf("%.3fms", endTime.Sub(beginTime).Seconds()*1000)))),
+			SetExtraInfo(template.HTML(fmt.Sprintf("<b>%s: </b>%.3fms", language.Get("query time"), endTime.Sub(beginTime).Seconds()*1000))),
 		Title:          tb.Info.Title,
 		FilterFormData: filterForm,
 		Description:    tb.Info.Description,
@@ -610,8 +608,7 @@ func (tb *DefaultTable) getDataFromDatabase(ctx *context.Context, params paramet
 		Thead:    thead,
 		InfoList: infoList,
 		Paginator: tb.GetPaginator(ctx, size, params,
-			template.HTML(fmt.Sprintf("<b>"+language.Get("query time")+": </b>"+
-				fmt.Sprintf("%.3fms", endTime.Sub(beginTime).Seconds()*1000)))),
+			template.HTML(fmt.Sprintf("<b>%s: </b>%.3fms", language.Get("query time"), endTime.Sub(beginTime).Seconds()*1000))),
 		Title:          tb.Info.Title,
 		FilterFormData: filterForm,
 		Description:    tb.Info.Description,
@@ -703,7 +700,7 @@ func (tb *DefaultTable) GetDataWithId(param parameter.Parameters) (FormInfo, err
 		}
 
 		if len(joinTables) > 0 {
-			if connection.Name() == db.DriverMssql  || connection.Name() == db.DriverPostgresql {
+			if connection.Name() == db.DriverMssql || connection.Name() == db.DriverPostgresql {
 				groupBy = " GROUP BY " + groupFields
 			} else {
 				groupBy = " GROUP BY " + pk
@@ -1139,7 +1136,7 @@ func (tb *DefaultTable) getColumns(table string) (Columns, bool) {
 	columnsModel, _ := tb.sql().Table(table).ShowColumns()
 
 	columns := make(Columns, len(columnsModel))
-	defer func(){
+	defer func() {
 		fmt.Println("getColumns columns", columns)
 	}()
 	switch tb.connectionDriver {

@@ -8,16 +8,16 @@ import (
 	"html/template"
 	"strings"
 
-	"github.com/GoAdminGroup/go-admin/modules/config"
-	"golang.org/x/text/language"
+	"goadmin/modules/config"
 )
 
+// 语言代码，和 golang.org/x/text/language 的 Tag.String() 一样（裁剪时去掉了 x/text）。
 var (
-	EN   = language.English.String()
-	CN   = language.Chinese.String()
-	JP   = language.Japanese.String()
-	TC   = language.TraditionalChinese.String()
-	PTBR = language.BrazilianPortuguese.String()
+	EN   = "en"
+	CN   = "zh"
+	JP   = "ja"
+	TC   = "zh-Hant"
+	PTBR = "pt-BR"
 )
 
 func FixedLanguageKey(key string) string {
@@ -108,14 +108,13 @@ type LangMap map[string]LangSet
 
 // Lang is the global LangMap.
 var Lang = LangMap{
-	language.Chinese.String():             cn,
-	language.English.String():             en,
-	language.Japanese.String():            jp,
-	language.TraditionalChinese.String():  tc,
-	language.BrazilianPortuguese.String(): ptbr,
+	"zh":      cn,
+	"en":      en,
+	"ja":      jp,
+	"zh-Hant": tc,
+	"pt-BR":   ptbr,
 
 	"cn":    cn,
-	"en":    en,
 	"jp":    jp,
 	"tc":    tc,
 	"pt-br": ptbr,

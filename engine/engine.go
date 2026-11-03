@@ -15,28 +15,28 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GoAdminGroup/go-admin/modules/language"
-	"github.com/GoAdminGroup/go-admin/template/icon"
-	"github.com/GoAdminGroup/go-admin/template/types/action"
+	"goadmin/modules/language"
+	"goadmin/template/icon"
+	"goadmin/template/types/action"
 
-	"github.com/GoAdminGroup/go-admin/adapter"
-	"github.com/GoAdminGroup/go-admin/context"
-	"github.com/GoAdminGroup/go-admin/modules/auth"
-	"github.com/GoAdminGroup/go-admin/modules/config"
-	"github.com/GoAdminGroup/go-admin/modules/db"
-	"github.com/GoAdminGroup/go-admin/modules/errors"
-	"github.com/GoAdminGroup/go-admin/modules/logger"
-	"github.com/GoAdminGroup/go-admin/modules/menu"
-	"github.com/GoAdminGroup/go-admin/modules/service"
-	"github.com/GoAdminGroup/go-admin/modules/system"
-	"github.com/GoAdminGroup/go-admin/modules/ui"
-	"github.com/GoAdminGroup/go-admin/plugins"
-	"github.com/GoAdminGroup/go-admin/plugins/admin"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/models"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/response"
-	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/table"
-	"github.com/GoAdminGroup/go-admin/template"
-	"github.com/GoAdminGroup/go-admin/template/types"
+	"goadmin/adapter"
+	"goadmin/context"
+	"goadmin/modules/auth"
+	"goadmin/modules/config"
+	"goadmin/modules/db"
+	"goadmin/modules/errors"
+	"goadmin/modules/logger"
+	"goadmin/modules/menu"
+	"goadmin/modules/service"
+	"goadmin/modules/system"
+	"goadmin/modules/ui"
+	"goadmin/plugins"
+	"goadmin/plugins/admin"
+	"goadmin/plugins/admin/models"
+	"goadmin/plugins/admin/modules/response"
+	"goadmin/plugins/admin/modules/table"
+	"goadmin/template"
+	"goadmin/template/types"
 )
 
 // Engine is the core component of goAdmin. It has two attributes.
@@ -130,7 +130,7 @@ func (eng *Engine) AddAuthService(processor auth.Processor) *Engine {
 func (eng *Engine) announce() *Engine {
 	if eng.config.Debug {
 		eng.announceLock.Do(func() {
-			fmt.Printf(language.Get("goadmin is now running. \nrunning in \"debug\" mode. switch to \"release\" mode in production.\n\n"))
+			fmt.Print(language.Get("goadmin is now running. \nrunning in \"debug\" mode. switch to \"release\" mode in production.\n\n"))
 		})
 	}
 	return eng
@@ -159,18 +159,6 @@ func (eng *Engine) setConfig(cfg *config.Config) *Engine {
 // AddConfigFromJSON set the global config from json file.
 func (eng *Engine) AddConfigFromJSON(path string) *Engine {
 	cfg := config.ReadFromJson(path)
-	return eng.setConfig(&cfg).announce().initDatabase()
-}
-
-// AddConfigFromYAML set the global config from yaml file.
-func (eng *Engine) AddConfigFromYAML(path string) *Engine {
-	cfg := config.ReadFromYaml(path)
-	return eng.setConfig(&cfg).announce().initDatabase()
-}
-
-// AddConfigFromINI set the global config from ini file.
-func (eng *Engine) AddConfigFromINI(path string) *Engine {
-	cfg := config.ReadFromINI(path)
 	return eng.setConfig(&cfg).announce().initDatabase()
 }
 

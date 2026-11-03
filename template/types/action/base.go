@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"html/template"
 
-	"github.com/GoAdminGroup/go-admin/context"
-	"github.com/GoAdminGroup/go-admin/modules/config"
-	"github.com/GoAdminGroup/go-admin/modules/utils"
-	"github.com/GoAdminGroup/go-admin/template/types"
+	"goadmin/context"
+	"goadmin/modules/config"
+	"goadmin/modules/utils"
+	"goadmin/template/types"
 )
 
 type AjaxData map[string]interface{}
@@ -44,13 +44,13 @@ func (base *BaseAction) SetBtnId(btnId string) {
 		base.BtnId = btnId
 	}
 }
-func (base *BaseAction) Js() template.JS              { return base.JS }
-func (base *BaseAction) BtnClass() template.HTML      { return "" }
-func (base *BaseAction) BtnAttribute() template.HTML  { return "" }
-func (base *BaseAction) GetCallbacks() context.Node   { return context.Node{} }
+func (base *BaseAction) Js() template.JS                                  { return base.JS }
+func (base *BaseAction) BtnClass() template.HTML                          { return "" }
+func (base *BaseAction) BtnAttribute() template.HTML                      { return "" }
+func (base *BaseAction) GetCallbacks() context.Node                       { return context.Node{} }
 func (base *BaseAction) ExtContent(ctx *context.Context) template.HTML    { return template.HTML(``) }
 func (base *BaseAction) FooterContent(ctx *context.Context) template.HTML { return template.HTML(``) }
-func (base *BaseAction) SetBtnData(data interface{})  { base.BtnData = data }
+func (base *BaseAction) SetBtnData(data interface{})                      { base.BtnData = data }
 
 var _ types.Action = (*AjaxAction)(nil)
 var _ types.Action = (*PopUpAction)(nil)
