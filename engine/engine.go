@@ -228,29 +228,9 @@ func (eng *Engine) DefaultConnection() db.Connection {
 	return eng.DB(eng.config.Databases.GetDefault().Driver)
 }
 
-// MysqlConnection return the mysql db connection of given driver.
-func (eng *Engine) MysqlConnection() db.Connection {
-	return db.GetConnectionFromService(eng.Services.Get(db.DriverMysql))
-}
-
-// MssqlConnection return the mssql db connection of given driver.
-func (eng *Engine) MssqlConnection() db.Connection {
-	return db.GetConnectionFromService(eng.Services.Get(db.DriverMssql))
-}
-
-// PostgresqlConnection return the postgresql db connection of given driver.
-func (eng *Engine) PostgresqlConnection() db.Connection {
-	return db.GetConnectionFromService(eng.Services.Get(db.DriverPostgresql))
-}
-
 // SqliteConnection return the sqlite db connection of given driver.
 func (eng *Engine) SqliteConnection() db.Connection {
 	return db.GetConnectionFromService(eng.Services.Get(db.DriverSqlite))
-}
-
-// OceanBaseConnection return the OceanBase db connection of given driver.
-func (eng *Engine) OceanBaseConnection() db.Connection {
-	return db.GetConnectionFromService(eng.Services.Get(db.DriverOceanBase))
 }
 
 type ConnectionSetter func(db.Connection)
@@ -261,27 +241,9 @@ func (eng *Engine) ResolveConnection(setter ConnectionSetter, driver string) *En
 	return eng
 }
 
-// ResolveMysqlConnection resolve the mysql connection.
-func (eng *Engine) ResolveMysqlConnection(setter ConnectionSetter) *Engine {
-	eng.ResolveConnection(setter, db.DriverMysql)
-	return eng
-}
-
-// ResolveMssqlConnection resolve the mssql connection.
-func (eng *Engine) ResolveMssqlConnection(setter ConnectionSetter) *Engine {
-	eng.ResolveConnection(setter, db.DriverMssql)
-	return eng
-}
-
 // ResolveSqliteConnection resolve the sqlite connection.
 func (eng *Engine) ResolveSqliteConnection(setter ConnectionSetter) *Engine {
 	eng.ResolveConnection(setter, db.DriverSqlite)
-	return eng
-}
-
-// ResolvePostgresqlConnection resolve the postgres connection.
-func (eng *Engine) ResolvePostgresqlConnection(setter ConnectionSetter) *Engine {
-	eng.ResolveConnection(setter, db.DriverPostgresql)
 	return eng
 }
 
@@ -437,26 +399,12 @@ func (eng *Engine) initNavJumpButtonParams() []navJumpButtonParam {
 			Title:      "site setting",
 			TitleScore: "config",
 		}, {
-			Exist:      !eng.config.HideToolEntrance && eng.config.IsNotProductionEnvironment(),
-			Icon:       icon.Wrench,
-			BtnName:    types.NavBtnToolName,
-			URL:        "/info/generate/new",
-			Title:      "code generate tool",
-			TitleScore: "tool",
-		}, {
 			Exist:      !eng.config.HideAppInfoEntrance,
 			Icon:       icon.Info,
 			BtnName:    types.NavBtnInfoName,
 			URL:        "/application/info",
 			Title:      "site info",
 			TitleScore: "system",
-		}, {
-			Exist:      !eng.config.HidePluginEntrance,
-			Icon:       icon.Th,
-			BtnName:    types.NavBtnPlugName,
-			URL:        "/plugins",
-			Title:      "plugins",
-			TitleScore: "plugin",
 		},
 	}
 }
@@ -465,12 +413,15 @@ func (eng *Engine) initSiteSetting() {
 
 	printInitMsg(language.Get("initialize configuration"))
 
-	err := eng.config.Update(models.Site().
-		SetConn(eng.DefaultConnection()).
-		Init(eng.config.ToMap()).
-		AllToMap())
-	if err != nil {
-		logger.Panic(err)
+	// 禁止在页面上改配置时，配置完全以代码为准，不读写 goadmin_site 表（上游总是用表里的值覆盖代码里的）
+	if eng.config.IsAllowConfigModification() {
+		err := eng.config.Update(models.Site().
+			SetConn(eng.DefaultConnection()).
+			Init(eng.config.ToMap()).
+			AllToMap())
+		if err != nil {
+			logger.Panic(err)
+		}
 	}
 	eng.Services.Add("config", config.SrvWithConfig(eng.config))
 
