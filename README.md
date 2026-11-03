@@ -27,6 +27,8 @@
 
 另外一处行为改动：`ProhibitConfigModification: true` 时配置完全以代码为准，不读写 `goadmin_site` 表（上游总是用表里的值覆盖代码里的，改了代码不生效）。
 
+修了一处上游的样式问题：表格的操作列是 sticky（`z-index: 1`），每格各自成层，后面行的操作格会盖住前面行弹出的操作菜单（表格有两行以上就能看到）。打开菜单的那格提到 `z-index: 2`（`td:last-child:has(.open)`，sword 和 common 的表格样式里各一处）。
+
 ## 主题
 
 只留 `themes/sword`（和它要的 `themes/common`）。adminlte 删了，`template.Default(ctx)` 的组件照常用。

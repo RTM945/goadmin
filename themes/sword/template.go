@@ -2186,6 +2186,10 @@ var TemplateList = map[string]string{"403": `<div class="missing-content">
                 right: 0;
                 z-index: 1;
             }
+            /* 每格 sticky 各自成层，后面行的操作格会盖住前面行弹出的菜单：打开菜单的那格提一层 */
+            table.sticky_table tbody td:last-child:has(.open) {
+                z-index: 2;
+            }
             table tbody td:last-child {
                 background-color: white;
             }
