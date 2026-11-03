@@ -1,190 +1,32 @@
-<p align="center">
-  <a href="https://github.com/GoAdminGroup/go-admin">
-    <img width="48%" alt="go-admin" src="http://quick.go-admin.cn/official/assets/imgs/github_logo.png">
-  </a>
-</p>
+# goadmin（裁剪版 GoAdmin）
 
-<p align="center">
-    the missing golang data admin panel builder tool.
-</p>
+[GoAdmin](https://github.com/GoAdminGroup/go-admin) v1.2.26 的本地 fork，给 GM 后台（同级的 `../expgm`）用。模块名 `goadmin`，用的地方在 go.mod 里 `replace goadmin => ../goadmin`（和 pdbgen 一样）。上游许可证是 Apache-2.0，见 `LICENSE`。
 
-<p align="center">
-    <a href="https://book.go-admin.cn/en">Documentation</a> | 
-	<a href="http://doc.go-admin.cn/zh/">中文文档</a> | 
-    <a href="./README_CN.md">中文介绍</a> |
-    <a href="https://demo.go-admin.com">DEMO</a> |
-    <a href="https://demo.go-admin.cn">中文DEMO</a> |
-    <a href="https://twitter.com/cg3365688034">Twitter</a> |
-    <a href="http://discuss.go-admin.com">Forum</a>
-</p>
+第一个提交是上游原样的代码（go-admin v1.2.26、themes v0.0.48 的 `sword` 和 `common`、`GoAdminGroup/html` v0.0.1），之后每一步裁剪是一个提交，`git log -p` 能看到改了什么。
 
-<p align="center">
-  <a href="http://drone.go-admin.com/GoAdminGroup/go-admin"><img alt="Build Status" src="http://drone.go-admin.com/api/badges/GoAdminGroup/go-admin/status.svg?ref=refs/heads/master"></a>
-  <a href="https://goreportcard.com/report/github.com/GoAdminGroup/go-admin"><img alt="Go Report Card" src="https://camo.githubusercontent.com/59eed852617e19c272a4a4764fd09c669957fe75/68747470733a2f2f676f7265706f7274636172642e636f6d2f62616467652f6769746875622e636f6d2f6368656e6867352f676f2d61646d696e"></a>
-  <a href="https://goreportcard.com/report/github.com/GoAdminGroup/go-admin"><img alt="golang" src="https://img.shields.io/badge/awesome-golang-blue.svg"></a>
-  <a href="https://t.me/joinchat/NlyH6Bch2QARZkArithKvg" rel="nofollow"><img alt="telegram" src="https://img.shields.io/badge/chat%20on-telegram-blue" style="max-width:100%;"></a>
-  <a href="https://goadmin.slack.com"><img alt="slack" src="https://img.shields.io/badge/chat on-Slack-yellow.svg"></a>
-  <a href="https://godoc.org/github.com/GoAdminGroup/go-admin" rel="nofollow"><img src="https://camo.githubusercontent.com/a9a286d43bdfff9fb41b88b25b35ea8edd2634fc/68747470733a2f2f676f646f632e6f72672f6769746875622e636f6d2f646572656b7061726b65722f64656c76653f7374617475732e737667" alt="GoDoc" data-canonical-src="https://godoc.org/github.com/derekparker/delve?status.svg" style="max-width:100%;"></a>
-  <a href="https://raw.githubusercontent.com/GoAdminGroup/go-admin/master/LICENSE" rel="nofollow"><img src="https://img.shields.io/badge/license-Apache2.0-blue.svg" alt="license" data-canonical-src="https://img.shields.io/badge/license-Apache2.0-blue.svg" style="max-width:100%;"></a>
-</p> 
+## 依赖
 
-<p align="center">
-    Inspired by <a href="https://github.com/z-song/laravel-admin" target="_blank">laravel-admin</a>
-</p>
+只有 `golang.org/x/crypto`（bcrypt 存后台密码）。数据库驱动不在这里：用的程序自己注册 `sqlite3` 驱动（expgm 用纯 Go 的 modernc.org/sqlite）。
 
-## Preface
+上游的直接依赖有 40 多个，编进二进制的约 35 个第三方模块（gin、xorm、goleveldb、zap、lib/pq、excelize……）。
 
-GoAdmin is a toolkit to help you build a data visualization admin panel for your golang app.
+## 去掉了什么、换成了什么
 
-Online demo: [https://demo.go-admin.com](https://demo.go-admin.com)
+| 上游 | 现在 |
+|---|---|
+| gin、chi、echo、beego、iris、fiber 等 13 个框架适配器 | 只有 `adapter/nethttp`，路由挂在标准库 `http.ServeMux` 上 |
+| excelize 导出 xlsx | 标准库 `encoding/csv` 导出 CSV（带 UTF-8 BOM，Excel 直接打开不乱码） |
+| zap + lumberjack 日志 | 标准库 `log/slog`，写到 `slog.Default()`，落点由宿主程序配；`logger` 包的函数名不变 |
+| YAML、INI 配置文件（yaml.v2、ini.v1） | 只留 Go 结构体和 JSON（`engine.AddConfig`、`AddConfigFromJSON`） |
+| MySQL、MSSQL、PostgreSQL、OceanBase | 只留 SQLite（`table.DefaultConfig` 默认也改成 SQLite） |
+| xorm（只用在一个没人调的 `CreateDB`） | 删掉 |
+| x/text 的语言 Tag、`cases.Title` | 语言代码写成字面量；`utils.Title` 十几行 |
+| google/uuid、NebulousLabs/fastrand | 标准库 `crypto/rand` |
+| 安装向导、插件中心（远程插件商店）、代码生成器、`plugins/example` | 删掉，导航栏上对应的入口也删了 |
+| 示例、多框架测试、要连 MySQL/MSSQL 的测试、依赖 testify 的测试 | 删掉；留下的测试只用标准库 |
 
-Quick follow up example: [https://github.com/GoAdminGroup/example](https://github.com/GoAdminGroup/example)
+另外一处行为改动：`ProhibitConfigModification: true` 时配置完全以代码为准，不读写 `goadmin_site` 表（上游总是用表里的值覆盖代码里的，改了代码不生效）。
 
-GoAdmin+vue example: [https://github.com/GoAdminGroup/goadmin-vue-example](https://github.com/GoAdminGroup/goadmin-vue-example)
+## 主题
 
-![interface](http://file.go-admin.cn/introduction/interface_en_3.png)
-
-## Features
-
-- 🚀 **Fast**: build a production admin panel app in **ten** minutes.
-- 🎨 **Theming**: beautiful ui themes supported(default adminlte, more themes are coming.)
-- 🔢 **Plugins**: many plugins to use(more useful and powerful plugins are coming.)
-- ✅ **Rbac**: out of box rbac auth system.
-- ⚙️ **Frameworks**: support most of the go web frameworks.
-
-## Translation
-We need your help: [https://github.com/GoAdminGroup/docs/issues/1](https://github.com/GoAdminGroup/docs/issues/1)
-
-## Who is using
-
-[Comment the issue to tell us](https://github.com/GoAdminGroup/go-admin/issues/71).
-
-## How to
-
-Following three steps to run it.
-
-```shell
-$ mkdir new_project && cd new_project
-$ go install github.com/GoAdminGroup/adm@latest
-$ adm init web
-```
-
-### Step 1: import sql
-
-- [mysql](https://raw.githubusercontent.com/GoAdminGroup/go-admin/master/data/admin.sql)
-- [mssql](https://raw.githubusercontent.com/GoAdminGroup/go-admin/master/data/admin.mssql)
-- [postgresql](https://raw.githubusercontent.com/GoAdminGroup/go-admin/master/data/admin.pgsql)
-- [sqlite](https://raw.githubusercontent.com/GoAdminGroup/go-admin/master/data/admin.db)
-- [OceanBase](https://raw.githubusercontent.com/GoAdminGroup/go-admin/master/data/admin.sql)
-
-
-### Step 2: create main.go
-
-<details><summary>main.go</summary>
-<p>
-
-```go
-package main
-
-import (
-	"github.com/gin-gonic/gin"
-	_ "github.com/GoAdminGroup/go-admin/adapter/gin"
-	_ "github.com/GoAdminGroup/go-admin/modules/db/drivers/mysql"
-	"github.com/GoAdminGroup/go-admin/engine"
-	"github.com/GoAdminGroup/go-admin/plugins/admin"
-	"github.com/GoAdminGroup/go-admin/modules/config"
-	"github.com/GoAdminGroup/themes/adminlte"
-	"github.com/GoAdminGroup/go-admin/template"
-	"github.com/GoAdminGroup/go-admin/template/chartjs"
-	"github.com/GoAdminGroup/go-admin/template/types"
-	"github.com/GoAdminGroup/go-admin/examples/datamodel"
-	"github.com/GoAdminGroup/go-admin/modules/language"
-)
-
-func main() {
-	r := gin.Default()
-
-	eng := engine.Default()
-
-	// global config
-	cfg := config.Config{
-		Databases: config.DatabaseList{
-			"default": {
-				Host:         "127.0.0.1",
-				Port:         "3306",
-				User:         "root",
-				Pwd:          "root",
-				Name:         "goadmin",
-				MaxIdleConns: 50,
-				MaxOpenConns: 150,
-				ConnMaxLifetime: time.Hour,
-				Driver:       "mysql",
-			},
-        	},
-		UrlPrefix: "admin",
-		// STORE is important. And the directory should has permission to write.
-		Store: config.Store{
-		    Path:   "./uploads", 
-		    Prefix: "uploads",
-		},
-		Language: language.EN,
-		// debug mode
-		Debug: true,
-		// log file absolute path
-		InfoLogPath: "/var/logs/info.log",
-		AccessLogPath: "/var/logs/access.log",
-		ErrorLogPath: "/var/logs/error.log",
-		ColorScheme: adminlte.ColorschemeSkinBlack,
-	}
-
-	// add component chartjs
-	template.AddComp(chartjs.NewChart())
-
-	_ = eng.AddConfig(&cfg).
-		AddGenerators(datamodel.Generators).
-	        // add generator, first parameter is the url prefix of table when visit.
-    	        // example:
-    	        //
-    	        // "user" => http://localhost:9033/admin/info/user
-    	        //		
-		AddGenerator("user", datamodel.GetUserTable).
-		Use(r)
-	
-	// customize your pages
-	eng.HTML("GET", "/admin", datamodel.GetContent)
-
-	_ = r.Run(":9033")
-}
-```
-
-</p>
-</details>
-
-More framework examples: [https://github.com/GoAdminGroup/go-admin/tree/master/examples](https://github.com/GoAdminGroup/go-admin/tree/master/examples)
-
-### Step 3: run
-
-```shell
-GO111MODULE=on go run main.go
-```
-
-visit: [http://localhost:9033/admin](http://localhost:9033/admin)
-
-account: admin password: admin
-
-[A super simple example here](https://github.com/GoAdminGroup/example)
-
-See the [docs](https://book.go-admin.cn) for more details.
-
-## Backers
-
- Your support will help me do better! [[Become a backer](https://opencollective.com/go-admin#backer)]
- <a href="https://opencollective.com/go-admin#backers" target="_blank"><img src="https://opencollective.com/go-admin/backers.svg?width=890"></a>
-
-## Contribution
-
-[here for contribution guide](CONTRIBUTING.md)
-
-<strong>here to join into the develop team</strong>
-
-[join telegram](https://t.me/joinchat/NlyH6Bch2QARZkArithKvg)
+只留 `themes/sword`（和它要的 `themes/common`）。adminlte 删了，`template.Default(ctx)` 的组件照常用。
