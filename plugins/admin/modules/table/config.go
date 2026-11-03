@@ -23,7 +23,7 @@ type Config struct {
 
 func DefaultConfig() Config {
 	return Config{
-		Driver:     db.DriverMysql,
+		Driver:     db.DriverSqlite, // 裁剪后只有 SQLite
 		CanAdd:     true,
 		Editable:   true,
 		Deletable:  true,
