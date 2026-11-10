@@ -6,6 +6,11 @@
     {{ template "head" . }}
 
     <body class="hold-transition skin-black sidebar-mini fixed">
+    <style>
+        /* 固定布局下 AdminLTE 给 .wrapper 设了 overflow:hidden（它假定 body 滚动），可这里 html、body、.wrapper 都是 height:100%，
+           body 没东西可滚，内容超过一屏就拖不下去：滚动交回 .wrapper，左边栏和顶栏是 position:fixed，不跟着滚 */
+        .fixed .wrapper { overflow-y: auto; }
+    </style>
     <div class="wrapper">
 
         {{if not .Iframe}}
