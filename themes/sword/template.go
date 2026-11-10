@@ -2863,7 +2863,7 @@ var TemplateList = map[string]string{"403": `<div class="missing-content">
 
     {{ template "head" . }}
 
-    <body class="hold-transition skin-black sidebar-mini">
+    <body class="hold-transition skin-black sidebar-mini fixed">
     <div class="wrapper">
 
         {{if not .Iframe}}

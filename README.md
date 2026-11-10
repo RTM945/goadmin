@@ -29,6 +29,8 @@
 
 修了一处上游的样式问题：表格的操作列是 sticky（`z-index: 1`），每格各自成层，后面行的操作格会盖住前面行弹出的操作菜单（表格有两行以上就能看到）。打开菜单的那格提到 `z-index: 2`（`td:last-child:has(.open)`，sword 和 common 的表格样式里各一处）。
 
+sword 的页面开了 AdminLTE 的固定布局（`<body>` 加 `fixed`，`layout.tmpl` 和编进 `template.go` 的同一份各一处）：上游内容超过一屏时，滚动会把左边栏和顶栏一起滚走；现在只有右边内容滚，左边栏菜单长了自己滚（AdminLTE 自带的 slimScroll）。
+
 ## 主题
 
 只留 `themes/sword`（和它要的 `themes/common`）。adminlte 删了，`template.Default(ctx)` 的组件照常用。
