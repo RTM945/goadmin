@@ -1,12 +1,22 @@
 # goadmin（裁剪版 GoAdmin）
 
-[GoAdmin](https://github.com/GoAdminGroup/go-admin) v1.2.26 的本地 fork，给 GM 后台（同级的 `../expgm`）用。模块名 `goadmin`，用的地方在 go.mod 里 `replace goadmin => ../goadmin`（和 pdbgen 一样）。上游许可证是 Apache-2.0，见 `LICENSE`。
+[GoAdmin](https://github.com/GoAdminGroup/go-admin) v1.2.26 的裁剪版：只留 net/http、SQLite 和 sword 主题，第三方依赖只剩一个。上游许可证是 Apache-2.0，见 `LICENSE`。
+
+模块名是 `goadmin`（不是仓库路径），import 写 `goadmin/...`，用的地方在 go.mod 里 replace 过来：
+
+```
+require goadmin v0.0.0
+
+replace goadmin v0.0.0 => github.com/RTM945/goadmin <提交号或伪版本>
+```
+
+本地边改边用时，在不提交的 `go.work` 里把它指到本地目录：`replace goadmin => ../goadmin`。
 
 第一个提交是上游原样的代码（go-admin v1.2.26、themes v0.0.48 的 `sword` 和 `common`、`GoAdminGroup/html` v0.0.1），之后每一步裁剪是一个提交，`git log -p` 能看到改了什么。
 
 ## 依赖
 
-只有 `golang.org/x/crypto`（bcrypt 存后台密码）。数据库驱动不在这里：用的程序自己注册 `sqlite3` 驱动（expgm 用纯 Go 的 modernc.org/sqlite）。
+只有 `golang.org/x/crypto`（bcrypt 存后台密码）。数据库驱动不在这里：用的程序自己注册 `sqlite3` 驱动（比如纯 Go 的 modernc.org/sqlite）。
 
 上游的直接依赖有 40 多个，编进二进制的约 35 个第三方模块（gin、xorm、goleveldb、zap、lib/pq、excelize……）。
 
